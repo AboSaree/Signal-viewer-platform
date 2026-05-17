@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medical Signal Viewer — Program Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0e0f12;
+    --paper: #f5f3ee;
+    --accent: #1a56c4;
+    --accent2: #d94f2b;
+    --accent3: #189a5a;
+    --accent4: #8b44c5;
+    --muted: #6b6f79;
+    --border: #d4d0c8;
+    --mono: 'IBM Plex Mono', monospace;
+    --display: 'Syne', sans-serif;
+    --body: 'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 15px; scroll-behavior: smooth; }
+  body {
+    font-family: var(--body);
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.65;
+  }
+
+  /* ── COVER ── */
+  .cover {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 80px 60px 72px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.03) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.03) 40px);
+    pointer-events: none;
+  }
+  .cover-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .18em;
+    color: rgba(255,255,255,.35);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .cover h1 {
+    font-family: var(--display);
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+  }
+  .cover h1 span { color: #63b3ed; }
+  .cover-sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: rgba(255,255,255,.5);
+    letter-spacing: .05em;
+    position: relative; z-index: 1;
+  }
+  .cover-ecg {
+    position: absolute;
+    right: 60px;
+    bottom: 32px;
+    width: 260px;
+    opacity: 0.12;
+  }
+
+  /* ── LAYOUT ── */
+  .page { max-width: 960px; margin: 0 auto; padding: 60px 40px 100px; }
+
+  /* ── SECTION HEADERS ── */
+  .section {
+    margin-bottom: 64px;
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .section h2 {
+    font-family: var(--display);
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 18px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 10px;
+  }
+  .section p { margin-bottom: 14px; color: #2a2d35; }
+  .section p strong { color: var(--ink); }
+
+  /* ── STEP FLOW ── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+    margin: 32px 0;
+  }
+  .flow::before {
+    content: '';
+    position: absolute;
+    left: 28px;
+    top: 28px;
+    bottom: 28px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent), var(--accent3));
+  }
+  .flow-step {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    padding: 20px 0;
+    position: relative;
+  }
+  .flow-num {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    border: 3px solid var(--paper);
+    box-shadow: 0 0 0 2px var(--ink);
+  }
+  .flow-num.c1 { background: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .flow-num.c2 { background: var(--accent2); box-shadow: 0 0 0 2px var(--accent2); }
+  .flow-num.c3 { background: var(--accent3); box-shadow: 0 0 0 2px var(--accent3); }
+  .flow-num.c4 { background: var(--accent4); box-shadow: 0 0 0 2px var(--accent4); }
+  .flow-num.c5 { background: #c4871a; box-shadow: 0 0 0 2px #c4871a; }
+
+  .flow-body { padding-top: 10px; }
+  .flow-body h3 {
+    font-family: var(--display);
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .flow-body p { font-size: 14px; margin-bottom: 0; }
+  .flow-body code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: rgba(26,86,196,0.08);
+    color: var(--accent);
+    border: 1px solid rgba(26,86,196,0.18);
+    border-radius: 3px;
+    padding: 1px 6px;
+  }
+
+  /* ── DIAGRAM ── */
+  .diagram-wrap {
+    background: var(--ink);
+    border-radius: 12px;
+    padding: 36px;
+    margin: 28px 0;
+    overflow-x: auto;
+    color: var(--paper);
+  }
+  .diagram-title {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.4);
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  /* ── SVG DIAGRAMS ── */
+  .svg-diagram {
+    display: block;
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+  }
+
+  /* ── CARDS GRID ── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .card {
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    background: #fff;
+  }
+  .card-icon {
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+  .card h4 {
+    font-family: var(--display);
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .card p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 0;
+  }
+  .card.blue  { border-color: #63b3ed; background: #f0f7ff; }
+  .card.green { border-color: #68d391; background: #f0faf4; }
+  .card.red   { border-color: #fc8181; background: #fff5f5; }
+  .card.purple{ border-color: #b794f4; background: #faf5ff; }
+  .card.amber { border-color: #f6ad55; background: #fffaf0; }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: #1a1d27;
+    color: #cdd6f4;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    overflow-x: auto;
+    line-height: 1.75;
+  }
+  .code-block .kw { color: #cba6f7; }
+  .code-block .fn { color: #89b4fa; }
+  .code-block .st { color: #a6e3a1; }
+  .code-block .cm { color: #6c7086; }
+
+  /* ── TAGS ── */
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    border-radius: 3px;
+    padding: 2px 8px;
+    margin: 2px 3px 2px 0;
+  }
+  .tag.blue   { background: rgba(26,86,196,.1); color: var(--accent); border: 1px solid rgba(26,86,196,.25); }
+  .tag.green  { background: rgba(24,154,90,.1); color: var(--accent3); border: 1px solid rgba(24,154,90,.25); }
+  .tag.red    { background: rgba(217,79,43,.1); color: var(--accent2); border: 1px solid rgba(217,79,43,.25); }
+  .tag.purple { background: rgba(139,68,197,.1); color: var(--accent4); border: 1px solid rgba(139,68,197,.25); }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+  th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--ink);
+    color: var(--paper);
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(0,0,0,.025); }
+  td code { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+
+  /* ── CALLOUT ── */
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: rgba(26,86,196,.06);
+    padding: 14px 18px;
+    border-radius: 0 6px 6px 0;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout.warn { border-color: #c4871a; background: rgba(196,135,26,.06); }
+  .callout.note { border-color: var(--accent3); background: rgba(24,154,90,.06); }
+
+  /* ── DIVIDER ── */
+  hr { border: none; border-top: 1.5px solid var(--border); margin: 48px 0; }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 2px solid var(--ink);
+    padding: 24px 40px;
+    max-width: 960px;
+    margin: 0 auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: .06em;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  @media(max-width:620px){
+    .cover{padding:50px 24px 56px}
+    .page{padding:40px 20px 80px}
+    .flow::before{left:22px}
+    .flow-num{width:44px;height:44px;min-width:44px}
+    .diagram-wrap{padding:20px}
+    th,td{padding:8px 10px}
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <!-- ECG waveform decorative SVG -->
+  <svg class="cover-ecg" viewBox="0 0 260 80" fill="none" stroke="#63b3ed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="0,40 20,40 28,40 32,10 36,70 42,20 48,55 54,40 80,40 90,40 96,15 100,65 106,25 110,50 116,40 150,40 160,40 166,12 170,68 176,22 180,52 186,40 220,40 230,40 236,14 240,66 246,24 250,50 260,40"/>
+  </svg>
+  <div class="cover-tag">Technical Documentation · index.html</div>
+  <h1>Medical Signal Viewer<br><span>Program Flow & Architecture</span></h1>
+  <div class="cover-sub">ECG · EEG · WFDB · Multi-Lead · Real-Time Canvas Renderer</div>
+</div>
+
+<div class="page">
+
+  <!-- ── OVERVIEW ── -->
+  <div class="section">
+    <div class="section-label">01 / Overview</div>
+    <h2>What This Program Does</h2>
+    <p>This is a <strong>single-file web application</strong> (everything in one <code>index.html</code>) that lets a user upload a medical signal recording (ECG or EEG in WFDB format, or a simple CSV), view its waveforms in real-time animated canvases, and run several signal-analysis visualizations — including a scatter plot, polar plots, and an XOR periodicity detector. It also displays an <strong>AI diagnosis panel</strong> if the backend returns one.</p>
+    <p>It talks to a <strong>Django REST backend</strong> running on <code>http://127.0.0.1:8000/api</code> for parsing WFDB files. CSV files are parsed entirely in the browser without any server call.</p>
+
+    <div class="callout note">
+      <strong>Key idea:</strong> The frontend holds all the signal data in memory after upload. Everything you see — the scrolling waveforms, polar plots, scatter plot — is drawn every animation frame using the HTML5 <strong>Canvas 2D API</strong>, with no chart library at all.
+    </div>
+  </div>
+
+  <!-- ── ARCHITECTURE ── -->
+  <div class="section">
+    <div class="section-label">02 / Architecture</div>
+    <h2>Class Map & Relationships</h2>
+    <p>The program is built as a set of ES6 classes. Here is how they relate to each other:</p>
+
+    <div class="diagram-wrap">
+      <div class="diagram-title">Class Dependency & Ownership Diagram</div>
+      <svg class="svg-diagram" viewBox="0 0 820 520" xmlns="http://www.w3.org/2000/svg" font-family="'IBM Plex Mono', monospace">
+        <defs>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.55)"/>
+          </marker>
+          <marker id="arrowB" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#63b3ed"/>
+          </marker>
+          <marker id="arrowG" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#68d391"/>
+          </marker>
+          <marker id="arrowP" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#b794f4"/>
+          </marker>
+        </defs>
+
+        <!-- App (center top) -->
+        <rect x="310" y="20" width="200" height="56" rx="6" fill="#1a56c4" stroke="#63b3ed" stroke-width="1.5"/>
+        <text x="410" y="46" text-anchor="middle" fill="white" font-size="14" font-weight="bold">App</text>
+        <text x="410" y="63" text-anchor="middle" fill="rgba(255,255,255,0.55)" font-size="9">orchestrator · root controller</text>
+
+        <!-- SignalService -->
+        <rect x="30" y="150" width="180" height="56" rx="6" fill="#0f3460" stroke="#63b3ed" stroke-width="1.5"/>
+        <text x="120" y="176" text-anchor="middle" fill="white" font-size="13" font-weight="bold">SignalService</text>
+        <text x="120" y="193" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">state store · event emitter</text>
+
+        <!-- AnimationService -->
+        <rect x="250" y="150" width="180" height="56" rx="6" fill="#0f3460" stroke="#68d391" stroke-width="1.5"/>
+        <text x="340" y="176" text-anchor="middle" fill="white" font-size="13" font-weight="bold">AnimationService</text>
+        <text x="340" y="193" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">rAF loop · tick counter</text>
+
+        <!-- Draw (static) -->
+        <rect x="470" y="150" width="160" height="56" rx="6" fill="#1f1f2e" stroke="#b794f4" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="550" y="176" text-anchor="middle" fill="white" font-size="13" font-weight="bold">Draw</text>
+        <text x="550" y="193" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">static canvas helpers</text>
+
+        <!-- Global color state -->
+        <rect x="660" y="150" width="140" height="56" rx="6" fill="#1f1f2e" stroke="#f6ad55" stroke-width="1.5" stroke-dasharray="6,3"/>
+        <text x="730" y="170" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Global Color</text>
+        <text x="730" y="184" text-anchor="middle" fill="white" font-size="11" font-weight="bold">State</text>
+        <text x="730" y="198" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">overrides + listeners</text>
+
+        <!-- ChannelView -->
+        <rect x="30" y="310" width="175" height="56" rx="6" fill="#1a3a1a" stroke="#68d391" stroke-width="1.5"/>
+        <text x="117" y="336" text-anchor="middle" fill="white" font-size="13" font-weight="bold">ChannelView</text>
+        <text x="117" y="353" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">per-lead scrolling canvas</text>
+
+        <!-- SingleWindowView -->
+        <rect x="230" y="310" width="185" height="56" rx="6" fill="#1a3a1a" stroke="#68d391" stroke-width="1.5"/>
+        <text x="322" y="336" text-anchor="middle" fill="white" font-size="12" font-weight="bold">SingleWindowView</text>
+        <text x="322" y="353" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">all leads one canvas</text>
+
+        <!-- ScatterView -->
+        <rect x="440" y="310" width="145" height="56" rx="6" fill="#1a1f3a" stroke="#63b3ed" stroke-width="1.5"/>
+        <text x="512" y="336" text-anchor="middle" fill="white" font-size="12" font-weight="bold">ScatterView</text>
+        <text x="512" y="353" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">XY cross-analysis</text>
+
+        <!-- PolarView -->
+        <rect x="30" y="430" width="145" height="56" rx="6" fill="#22133a" stroke="#b794f4" stroke-width="1.5"/>
+        <text x="102" y="456" text-anchor="middle" fill="white" font-size="12" font-weight="bold">PolarView</text>
+        <text x="102" y="473" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">polar amplitude plot</text>
+
+        <!-- PolarRatioView -->
+        <rect x="195" y="430" width="165" height="56" rx="6" fill="#22133a" stroke="#b794f4" stroke-width="1.5"/>
+        <text x="277" y="456" text-anchor="middle" fill="white" font-size="12" font-weight="bold">PolarRatioView</text>
+        <text x="277" y="473" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">ratio of 2 leads polar</text>
+
+        <!-- XorView -->
+        <rect x="380" y="430" width="130" height="56" rx="6" fill="#1a1010" stroke="#fc8181" stroke-width="1.5"/>
+        <text x="445" y="456" text-anchor="middle" fill="white" font-size="12" font-weight="bold">XorView</text>
+        <text x="445" y="473" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">periodicity heatmap</text>
+
+        <!-- DigitalXorView -->
+        <rect x="528" y="430" width="168" height="56" rx="6" fill="#1a1010" stroke="#fc8181" stroke-width="1.5"/>
+        <text x="612" y="456" text-anchor="middle" fill="white" font-size="12" font-weight="bold">DigitalXorView</text>
+        <text x="612" y="473" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">disagreement dot plot</text>
+
+        <!-- App → SignalService -->
+        <line x1="360" y1="76" x2="190" y2="150" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="245" y="122" fill="rgba(255,255,255,0.35)" font-size="9" text-anchor="middle">owns</text>
+
+        <!-- App → AnimationService -->
+        <line x1="390" y1="76" x2="355" y2="150" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="390" y="122" fill="rgba(255,255,255,0.35)" font-size="9" text-anchor="middle">owns</text>
+
+        <!-- App → ChannelView -->
+        <line x1="340" y1="76" x2="130" y2="310" stroke="#68d391" stroke-width="1.3" stroke-dasharray="5,4" marker-end="url(#arrowG)"/>
+        <text x="175" y="200" fill="#68d391" font-size="9" text-anchor="middle">creates[]</text>
+
+        <!-- App → SingleWindowView -->
+        <line x1="390" y1="76" x2="320" y2="310" stroke="#68d391" stroke-width="1.3" stroke-dasharray="5,4" marker-end="url(#arrowG)"/>
+
+        <!-- App → ScatterView etc -->
+        <line x1="440" y1="76" x2="510" y2="310" stroke="#63b3ed" stroke-width="1.3" stroke-dasharray="5,4" marker-end="url(#arrowB)"/>
+        <text x="510" y="230" fill="#63b3ed" font-size="9" text-anchor="middle">creates</text>
+
+        <!-- App → PolarView -->
+        <line x1="330" y1="76" x2="100" y2="430" stroke="#b794f4" stroke-width="1.3" stroke-dasharray="5,4" marker-end="url(#arrowP)"/>
+
+        <!-- App → XorView etc -->
+        <line x1="450" y1="76" x2="445" y2="430" stroke="#fc8181" stroke-width="1.3" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+
+        <!-- ChannelView uses SS -->
+        <line x1="117" y1="310" x2="150" y2="206" stroke="#68d391" stroke-width="1" stroke-dasharray="3,4" marker-end="url(#arrowG)"/>
+        <text x="100" y="260" fill="#68d391" font-size="8">reads</text>
+
+        <!-- ChannelView uses AS -->
+        <line x1="175" y1="338" x2="260" y2="206" stroke="#68d391" stroke-width="1" stroke-dasharray="3,4" marker-end="url(#arrowG)"/>
+
+        <!-- Legend -->
+        <rect x="640" y="370" width="168" height="120" rx="5" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+        <text x="724" y="390" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="9" letter-spacing="2">LEGEND</text>
+        <line x1="655" y1="410" x2="695" y2="410" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="700" y="414" fill="rgba(255,255,255,0.5)" font-size="9">owns</text>
+        <line x1="655" y1="432" x2="695" y2="432" stroke="#68d391" stroke-width="1.3" stroke-dasharray="5,3" marker-end="url(#arrowG)"/>
+        <text x="700" y="436" fill="rgba(255,255,255,0.5)" font-size="9">creates</text>
+        <line x1="655" y1="454" x2="695" y2="454" stroke="#68d391" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrowG)"/>
+        <text x="700" y="458" fill="rgba(255,255,255,0.5)" font-size="9">reads/uses</text>
+        <rect x="651" y="467" width="14" height="10" rx="2" fill="none" stroke="#b794f4" stroke-width="1.3" stroke-dasharray="4,2"/>
+        <text x="700" y="476" fill="rgba(255,255,255,0.5)" font-size="9">static util</text>
+      </svg>
+    </div>
+
+    <div class="callout">
+      The <strong>App</strong> class is the root. It creates one <code>SignalService</code> (shared state) and one <code>AnimationService</code> (the RAF loop), then creates view objects that register themselves with these two services.
+    </div>
+  </div>
+
+  <!-- ── CORE SERVICES ── -->
+  <div class="section">
+    <div class="section-label">03 / Core Services</div>
+    <h2>SignalService &amp; AnimationService</h2>
+
+    <p>These two services are the backbone shared by every view in the app.</p>
+
+    <div class="cards">
+      <div class="card blue">
+        <div class="card-icon">📦</div>
+        <h4>SignalService</h4>
+        <p>A tiny key-value store with event subscription. Holds <strong>all loaded signal data</strong> plus metadata (sample rate, channel count, window width, playback speed, status). Any code can call <code>ss.on('windowWidth', fn)</code> to react to changes — similar to a mini Redux.</p>
+      </div>
+      <div class="card green">
+        <div class="card-icon">⏱</div>
+        <h4>AnimationService</h4>
+        <p>Wraps <code>requestAnimationFrame</code> into a simple subscriber list. It increments a tick counter <code>t</code> on every frame and calls every registered callback. Views use this tick as a clock to compute the scrolling window position.</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+<span class="cm">// SignalService — get and set state</span>
+ss.<span class="fn">set</span>(<span class="st">'windowWidth'</span>, <span class="kw">1000</span>); <span class="cm">// fires all listeners for 'windowWidth'</span>
+ss.<span class="fn">on</span>(<span class="st">'windowWidth'</span>, v => channelView.<span class="fn">anchorAndResize</span>());
+
+<span class="cm">// AnimationService — register a per-frame draw callback</span>
+animService.<span class="fn">add</span>(t => channelView.<span class="fn">_draw</span>(t));
+    </div>
+  </div>
+
+  <!-- ── PROGRAM FLOW ── -->
+  <div class="section">
+    <div class="section-label">04 / Program Flow</div>
+    <h2>Step-by-Step User Journey</h2>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-num c1">01</div>
+        <div class="flow-body">
+          <h3>Page Load → App Bootstrap</h3>
+          <p>When the DOM is ready, <code>new App(document.getElementById('app'))</code> fires. The App constructor calls <code>_buildDOM()</code> (writes all HTML via innerHTML), <code>_bindEvents()</code> (attaches file drop, slider, and button listeners), and <code>as.start()</code> (starts the RAF loop). At this point the screen shows only the upload drop-zone.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num c2">02</div>
+        <div class="flow-body">
+          <h3>User Drops / Selects Files</h3>
+          <p><code>_handleFiles()</code> inspects the file list. If a <code>.hea</code> file is present → WFDB path. If a <code>.csv</code> is found → CSV path. Otherwise an error banner is shown. The two paths are:</p>
+          <div class="cards" style="margin-top:10px">
+            <div class="card blue">
+              <div class="card-icon">🌐</div>
+              <h4>WFDB Path</h4>
+              <p>All files are bundled into a <code>FormData</code> and <code>POST</code>ed to <code>/api/upload-view/</code> via XHR. The Django backend parses the WFDB record and returns JSON with channels, metadata, and optionally an AI diagnosis object.</p>
+            </div>
+            <div class="card green">
+              <div class="card-icon">📄</div>
+              <h4>CSV Path</h4>
+              <p>The file is read with <code>FileReader</code> entirely in the browser. Rows are split, parsed as floats, and shaped into the same JSON structure the server would return — then fed directly to <code>_loadFromServerData()</code>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num c3">03</div>
+        <div class="flow-body">
+          <h3>Data Loaded → State &amp; UI Update</h3>
+          <p><code>_loadFromServerData(data)</code> is called with the parsed signal. It pushes all values into <code>SignalService</code> (<code>signalData</code>, <code>numChannels</code>, <code>fs</code>, <code>sigNames</code>, <code>windowWidth</code> …), updates the metadata bar (record name, Hz, duration), sets the period slider bounds, shows the mode-choice card, and — if the server returned an <code>ai</code> object — calls <code>_renderAI()</code> to populate the AI diagnosis panel.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num c4">04</div>
+        <div class="flow-body">
+          <h3>User Picks Display Mode</h3>
+          <p>Two buttons appear: <strong>Separate Windows</strong> or <strong>Single Window</strong>.</p>
+          <ul style="margin:8px 0 0 18px; font-size:14px; color:#2a2d35;">
+            <li style="margin-bottom:6px"><strong>Separate:</strong> <code>_activateSeparate()</code> creates one <code>ChannelView</code> per channel. Each gets its own canvas, play/pause, amplitude zoom, and inline color style button.</li>
+            <li><strong>Single:</strong> <code>_activateSingle()</code> creates one <code>SingleWindowView</code> that renders all channels stacked on a single canvas with per-channel mini sub-axes, plus shows the global channel customization panel.</li>
+          </ul>
+          <p style="margin-top:8px">After the choice, the window-width, speed controls, and all analysis sections become visible.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num c5">05</div>
+        <div class="flow-body">
+          <h3>Real-Time Rendering Loop</h3>
+          <p>From this point the <code>AnimationService</code> ticks every frame (~60 fps). Every view's <code>_draw(t)</code> callback fires. The tick <code>t</code> combined with each view's <code>windowStart</code> and the playback speed computes which slice of signal data to render — creating the scrolling waveform effect. The user can drag the canvas to pan, scroll to advance, and use play/pause and amplitude buttons.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── VIEW CLASSES ── -->
+  <div class="section">
+    <div class="section-label">05 / View Classes</div>
+    <h2>Every Canvas View Explained</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Class</th>
+          <th>Purpose</th>
+          <th>Key Mechanics</th>
+          <th>Interaction</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>ChannelView</code></td>
+          <td>One scrolling waveform per ECG/EEG lead</td>
+          <td>Uses <code>_leftEdge(t)</code> = (windowStart + t × speed) % signalLength to decide which samples to draw. <code>Draw.signal()</code> maps sample index → pixel x, amplitude → pixel y.</td>
+          <td>Drag to pan, scroll to advance, play/pause, AMP±, color picker, SNAP saves PNG</td>
+        </tr>
+        <tr>
+          <td><code>SingleWindowView</code></td>
+          <td>All leads on one shared canvas, stacked in equal-height bands</td>
+          <td>Each channel occupies a vertical "band" of height <em>totalH / numChannels</em>. <code>Draw.miniSubAxis()</code> draws per-channel min/max tick labels within each band.</td>
+          <td>Same as ChannelView but controls apply globally; per-channel color in customization panel</td>
+        </tr>
+        <tr>
+          <td><code>ScatterView</code></td>
+          <td>Cross-plot of two leads (X vs Y scatter)</td>
+          <td>Each data point (xData[i], yData[i]) is projected to canvas coordinates. Points are colored by time (HSL hue shift). Zoom/pan transform the view window without recomputing data.</td>
+          <td>Scroll to zoom, drag to pan, SNAP, RESET VIEW</td>
+        </tr>
+        <tr>
+          <td><code>PolarView</code></td>
+          <td>Single lead in polar coordinates — r = amplitude, θ = time within period</td>
+          <td>For each sample: r = (value − min)/(max − min) × maxRadius; θ = 2π × (sampleIndex mod period) / period. Drawn with a thick glow pass + fine line pass.</td>
+          <td>Scroll to zoom, drag to pan, SNAP, RESET</td>
+        </tr>
+        <tr>
+          <td><code>PolarRatioView</code></td>
+          <td>Polar plot where r = |Lead A| / |Lead B| — reveals relative amplitude patterns</td>
+          <td>Ratio array is precomputed in constructor. Otherwise identical drawing logic to PolarView.</td>
+          <td>Scroll to zoom, drag to pan, SNAP, RESET</td>
+        </tr>
+        <tr>
+          <td><code>XorView</code></td>
+          <td>Periodicity heatmap — detects positions in the cycle that vary across repetitions</td>
+          <td>Signal is sliced into <em>n/windowWidth</em> chunks. For each x-position within a chunk, standard deviation across all chunks is computed. High σ → anomalous (red); low σ → periodic (blue/black). Rendered as a pixel color buffer.</td>
+          <td>SNAP only; static (not animated)</td>
+        </tr>
+        <tr>
+          <td><code>DigitalXorView</code></td>
+          <td>Companion to XorView: dot plot of the mean signal at positions where chunks disagreed</td>
+          <td>Uses max-min range across chunks vs tolerance gate. Dots appear only at disagreeing positions, plotted at their mean value. Shows <em>where</em> anomalies sit in amplitude space.</td>
+          <td>SNAP only; static</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── DRAW UTILITIES ── -->
+  <div class="section">
+    <div class="section-label">06 / Drawing</div>
+    <h2>The Draw Object (Shared Canvas Helpers)</h2>
+    <p>Instead of each class reimplementing canvas drawing, a static <code>Draw</code> object holds reusable helper functions called by every view:</p>
+    <div class="cards">
+      <div class="card"><div class="card-icon">▦</div><h4>Draw.grid()</h4><p>Draws faint cyan grid lines (12 vertical, 6 horizontal) and a dashed center baseline.</p></div>
+      <div class="card"><div class="card-icon">〰</div><h4>Draw.signal()</h4><p>Iterates pixels left-to-right, computes the sample index from window position, and draws the waveform as a glow + fine-line double stroke.</p></div>
+      <div class="card"><div class="card-icon">|</div><h4>Draw.periodMarkers()</h4><p>Draws dashed vertical lines at every window-width boundary so you can visually see where each period starts.</p></div>
+      <div class="card"><div class="card-icon">⟷</div><h4>Draw.axes()</h4><p>Draws the full X (sample index) and Y (mV) axes with tick marks — used in the full-axis Separate and ScatterView modes.</p></div>
+      <div class="card"><div class="card-icon">⊟</div><h4>Draw.miniSubAxis()</h4><p>Draws a tiny colored channel-name badge + min/max tick lines within a band — used in Single Window mode only.</p></div>
+    </div>
+  </div>
+
+  <!-- ── AI PANEL ── -->
+  <div class="section">
+    <div class="section-label">07 / AI Diagnosis</div>
+    <h2>AI Diagnosis Panel Flow</h2>
+    <p>If the Django backend includes an <code>ai</code> object in its JSON response, <code>App._renderAI(ai)</code> is called immediately after data loads. The panel is otherwise hidden.</p>
+
+    <div class="diagram-wrap">
+      <div class="diagram-title">AI Panel Data Flow</div>
+      <svg class="svg-diagram" viewBox="0 0 820 200" xmlns="http://www.w3.org/2000/svg" font-family="'IBM Plex Mono', monospace">
+        <defs>
+          <marker id="arr2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="rgba(255,255,255,0.6)"/>
+          </marker>
+        </defs>
+        <!-- Backend -->
+        <rect x="10" y="60" width="130" height="80" rx="6" fill="#1a3050" stroke="#63b3ed" stroke-width="1.5"/>
+        <text x="75" y="97" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Django</text>
+        <text x="75" y="113" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Backend</text>
+        <text x="75" y="130" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">/api/upload-view/</text>
+
+        <!-- Arrow -->
+        <line x1="140" y1="100" x2="200" y2="100" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" marker-end="url(#arr2)"/>
+        <text x="170" y="92" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">JSON</text>
+
+        <!-- _loadFromServerData -->
+        <rect x="200" y="60" width="150" height="80" rx="6" fill="#10362a" stroke="#68d391" stroke-width="1.5"/>
+        <text x="275" y="93" text-anchor="middle" fill="white" font-size="10" font-weight="bold">_loadFrom</text>
+        <text x="275" y="108" text-anchor="middle" fill="white" font-size="10" font-weight="bold">ServerData()</text>
+        <text x="275" y="128" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">if (data.ai) →</text>
+
+        <!-- Arrow -->
+        <line x1="350" y1="100" x2="410" y2="100" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+        <!-- _renderAI -->
+        <rect x="410" y="60" width="140" height="80" rx="6" fill="#1a1040" stroke="#b794f4" stroke-width="1.5"/>
+        <text x="480" y="97" text-anchor="middle" fill="white" font-size="11" font-weight="bold">_renderAI(ai)</text>
+        <text x="480" y="113" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">severity, label, conf</text>
+        <text x="480" y="126" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">findings, HR, method</text>
+
+        <!-- Arrow -->
+        <line x1="550" y1="100" x2="610" y2="100" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+        <!-- AI Panel -->
+        <rect x="610" y="40" width="200" height="120" rx="6" fill="#0e0a1a" stroke="#b794f4" stroke-width="1.5"/>
+        <text x="710" y="65" text-anchor="middle" fill="white" font-size="11" font-weight="bold">AI Panel UI</text>
+        <text x="710" y="85" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">🟢 severity badge + label</text>
+        <text x="710" y="100" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">confidence ring (SVG arc)</text>
+        <text x="710" y="115" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">findings bars (animated)</text>
+        <text x="710" y="130" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">HR + method tag</text>
+        <text x="710" y="148" text-anchor="middle" fill="#fc8181" font-size="7">⚠ CLINICAL SUPPORT ONLY</text>
+
+        <!-- Severity colors label -->
+        <rect x="10" y="155" width="380" height="34" rx="4" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <text x="20" y="169" fill="rgba(255,255,255,0.4)" font-size="8" letter-spacing="1">SEVERITY LEVELS:</text>
+        <rect x="110" y="161" width="8" height="8" rx="2" fill="#68d391"/>
+        <text x="122" y="170" fill="rgba(255,255,255,0.5)" font-size="8">normal</text>
+        <rect x="165" y="161" width="8" height="8" rx="2" fill="#63b3ed"/>
+        <text x="177" y="170" fill="rgba(255,255,255,0.5)" font-size="8">info</text>
+        <rect x="210" y="161" width="8" height="8" rx="2" fill="#f6ad55"/>
+        <text x="222" y="170" fill="rgba(255,255,255,0.5)" font-size="8">warning</text>
+        <rect x="275" y="161" width="8" height="8" rx="2" fill="#fc8181"/>
+        <text x="287" y="170" fill="rgba(255,255,255,0.5)" font-size="8">critical</text>
+
+        <text x="20" y="183" fill="rgba(255,255,255,0.4)" font-size="8">Methods: neural · random_forest · heuristic · error</text>
+      </svg>
+    </div>
+
+    <div class="callout warn">
+      <strong>Note:</strong> The frontend displays AI results it receives from the server — it does NOT run any ML model itself. The method tag (neural net / random forest / heuristic) comes entirely from the backend response.
+    </div>
+  </div>
+
+  <!-- ── COLOR SYSTEM ── -->
+  <div class="section">
+    <div class="section-label">08 / Customization</div>
+    <h2>Global Color &amp; Thickness State</h2>
+
+    <p>Channel colors and line widths are managed through three module-level globals, not inside any class. This lets all views (ChannelView, SingleWindowView, analysis plots) stay in sync automatically:</p>
+
+    <div class="code-block">
+<span class="cm">// Defaults — 12 colors cycling</span>
+<span class="kw">const</span> CHANNEL_COLORS = [<span class="st">'#63b3ed'</span>, <span class="st">'#68d391'</span>, <span class="st">'#fc8181'</span>, …];
+
+<span class="cm">// Override maps — sparse (only channels the user changed)</span>
+<span class="kw">const</span> channelColorOverrides = {};    <span class="cm">// idx → hex string</span>
+<span class="kw">const</span> channelThickOverrides = {};    <span class="cm">// idx → px number</span>
+<span class="kw">const</span> onChannelColorChange  = [];    <span class="cm">// subscriber callbacks</span>
+
+<span class="cm">// Helpers used by every draw call</span>
+<span class="fn">getChannelColor</span>(idx)   → override || default palette
+<span class="fn">getChannelThick</span>(idx)   → override || 1.5
+<span class="fn">setChannelColor</span>(idx, color) → stores + fires all subscribers
+    </div>
+
+    <p>When the user picks a new color via the color swatch in either the inline STYLE button (Separate mode) or the global Customization panel (Single mode), <code>setChannelColor()</code> fires all registered <code>onChannelColorChange</code> listeners so every UI element (swatch, label, canvas border) updates simultaneously.</p>
+  </div>
+
+  <!-- ── INTERACTION MAP ── -->
+  <div class="section">
+    <div class="section-label">09 / Interactions</div>
+    <h2>User Interaction Map</h2>
+
+    <div class="diagram-wrap">
+      <div class="diagram-title">User Gestures → Code Path</div>
+      <svg class="svg-diagram" viewBox="0 0 820 360" xmlns="http://www.w3.org/2000/svg" font-family="'IBM Plex Mono', monospace">
+        <defs>
+          <marker id="arr3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#63b3ed"/>
+          </marker>
+        </defs>
+        <!-- User -->
+        <circle cx="60" cy="180" r="42" fill="#1a1d27" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        <text x="60" y="175" text-anchor="middle" fill="white" font-size="22">👤</text>
+        <text x="60" y="196" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="10">User</text>
+
+        <!-- Gesture boxes -->
+        <rect x="130" y="20" width="160" height="40" rx="5" fill="#0f2040" stroke="#63b3ed" stroke-width="1"/>
+        <text x="210" y="45" text-anchor="middle" fill="#63b3ed" font-size="10">Drag canvas</text>
+
+        <rect x="130" y="80" width="160" height="40" rx="5" fill="#0f2040" stroke="#63b3ed" stroke-width="1"/>
+        <text x="210" y="105" text-anchor="middle" fill="#63b3ed" font-size="10">Scroll canvas</text>
+
+        <rect x="130" y="140" width="160" height="40" rx="5" fill="#1a3020" stroke="#68d391" stroke-width="1"/>
+        <text x="210" y="165" text-anchor="middle" fill="#68d391" font-size="10">Period slider</text>
+
+        <rect x="130" y="200" width="160" height="40" rx="5" fill="#1a3020" stroke="#68d391" stroke-width="1"/>
+        <text x="210" y="225" text-anchor="middle" fill="#68d391" font-size="10">Speed slider</text>
+
+        <rect x="130" y="260" width="160" height="40" rx="5" fill="#22103a" stroke="#b794f4" stroke-width="1"/>
+        <text x="210" y="285" text-anchor="middle" fill="#b794f4" font-size="10">Play / Pause btn</text>
+
+        <rect x="130" y="310" width="160" height="40" rx="5" fill="#22103a" stroke="#b794f4" stroke-width="1"/>
+        <text x="210" y="335" text-anchor="middle" fill="#b794f4" font-size="10">AMP+ / AMP− btn</text>
+
+        <!-- User lines -->
+        <line x1="102" y1="155" x2="130" y2="40" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+        <line x1="102" y1="165" x2="130" y2="100" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+        <line x1="102" y1="175" x2="130" y2="160" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+        <line x1="102" y1="185" x2="130" y2="220" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+        <line x1="102" y1="195" x2="130" y2="280" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+        <line x1="102" y1="205" x2="130" y2="330" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+
+        <!-- Code effects -->
+        <rect x="400" y="20" width="220" height="40" rx="5" fill="#040810" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <text x="510" y="45" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="10">windowStart ± delta (pan offset)</text>
+
+        <rect x="400" y="80" width="220" height="40" rx="5" fill="#040810" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <text x="510" y="105" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="10">frozenStart ± delta (when paused)</text>
+
+        <rect x="400" y="140" width="220" height="40" rx="5" fill="#040810" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <text x="510" y="158" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="10">ss.set('windowWidth', v)</text>
+        <text x="510" y="172" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="8">→ anchorAndResize() → refreshAnalysis()</text>
+
+        <rect x="400" y="200" width="220" height="40" rx="5" fill="#040810" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <text x="510" y="218" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="10">ss.set('playbackSpeed', v)</text>
+        <text x="510" y="232" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="8">→ applySpeed() on all views</text>
+
+        <rect x="400" y="260" width="220" height="40" rx="5" fill="#040810" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <text x="510" y="278" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="10">paused = true/false</text>
+        <text x="510" y="292" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="8">frozenStart = _leftEdge(t)</text>
+
+        <rect x="400" y="310" width="220" height="40" rx="5" fill="#040810" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <text x="510" y="328" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="10">scaleY *= 1.5 or / 1.5</text>
+        <text x="510" y="342" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="8">badge updates to "AMP ×n.nn"</text>
+
+        <!-- Arrows -->
+        <line x1="290" y1="40" x2="400" y2="40" stroke="#63b3ed" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <line x1="290" y1="100" x2="400" y2="100" stroke="#63b3ed" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <line x1="290" y1="160" x2="400" y2="160" stroke="#68d391" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <line x1="290" y1="220" x2="400" y2="220" stroke="#68d391" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <line x1="290" y1="280" x2="400" y2="280" stroke="#b794f4" stroke-width="1.2" marker-end="url(#arr3)"/>
+        <line x1="290" y1="330" x2="400" y2="330" stroke="#b794f4" stroke-width="1.2" marker-end="url(#arr3)"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ── XOR ANALYSIS ── -->
+  <div class="section">
+    <div class="section-label">10 / Signal Analysis</div>
+    <h2>XOR Periodicity Analysis — How It Works</h2>
+
+    <p>This is the most algorithmically interesting part of the frontend. Given a window width W, the signal is conceptually divided into <strong>N/W chunks</strong>. For each position x within a chunk (0 to W−1), values from all chunks at that position are collected. The standard deviation across those values is computed:</p>
+
+    <div class="code-block">
+<span class="cm">// For every x-pixel position within the window:</span>
+posInWindow = floor((x / canvasWidth) × W)
+values      = [ data[0×W + pos], data[1×W + pos], data[2×W + pos], … ]
+σ           = stdDev(values)
+
+<span class="cm">// If σ > threshold → anomalous (the signal differs at this phase)</span>
+<span class="cm">// If σ ≤ threshold → periodic (signal is consistent at this phase)</span>
+
+color       = σ=0  → dark   (periodic)
+              σ&gt;0  → blue→amber→red  (increasingly anomalous)
+    </div>
+
+    <div class="callout note">
+      Think of it like stacking transparencies of each heartbeat on top of each other. Wherever they all line up (periodic) you see black. Wherever they differ (arrhythmia, noise, artifact) you see color. The <strong>DigitalXorView</strong> is a companion that plots only the mean value at each "disagreeing" position as dots on a waveform axis.
+    </div>
+  </div>
+
+  <!-- ── DATA FLOW SUMMARY ── -->
+  <div class="section">
+    <div class="section-label">11 / Summary</div>
+    <h2>Complete Data Flow in One Picture</h2>
+
+    <div class="diagram-wrap">
+      <div class="diagram-title">End-to-End Data Flow</div>
+      <svg class="svg-diagram" viewBox="0 0 820 280" xmlns="http://www.w3.org/2000/svg" font-family="'IBM Plex Mono', monospace">
+        <defs>
+          <marker id="arr4" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="rgba(255,255,255,0.7)"/>
+          </marker>
+        </defs>
+
+        <!-- File -->
+        <rect x="10" y="110" width="100" height="60" rx="5" fill="#1a3050" stroke="#63b3ed" stroke-width="1.5"/>
+        <text x="60" y="138" text-anchor="middle" fill="white" font-size="11" font-weight="bold">ECG/EEG</text>
+        <text x="60" y="152" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="9">files on disk</text>
+        <text x="60" y="164" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="8">.hea .dat .csv</text>
+
+        <line x1="110" y1="140" x2="145" y2="140" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+        <!-- Drop zone -->
+        <rect x="145" y="110" width="110" height="60" rx="5" fill="#0e2030" stroke="#63b3ed" stroke-width="1.5"/>
+        <text x="200" y="135" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Drop Zone</text>
+        <text x="200" y="149" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">drag &amp; drop</text>
+        <text x="200" y="163" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">or file picker</text>
+
+        <line x1="255" y1="140" x2="285" y2="140" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+        <!-- Parser -->
+        <rect x="285" y="100" width="110" height="80" rx="5" fill="#101820" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        <text x="340" y="125" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Parser</text>
+        <text x="340" y="143" text-anchor="middle" fill="#63b3ed" font-size="8">WFDB →</text>
+        <text x="340" y="155" text-anchor="middle" fill="#63b3ed" font-size="8">Django XHR</text>
+        <text x="340" y="170" text-anchor="middle" fill="#68d391" font-size="8">CSV → browser</text>
+
+        <line x1="395" y1="140" x2="425" y2="140" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+        <!-- SignalService -->
+        <rect x="425" y="100" width="130" height="80" rx="5" fill="#0a2040" stroke="#63b3ed" stroke-width="2"/>
+        <text x="490" y="128" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Signal</text>
+        <text x="490" y="143" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Service</text>
+        <text x="490" y="162" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">signalData[][]</text>
+        <text x="490" y="174" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">windowWidth, speed…</text>
+
+        <!-- SS → Views -->
+        <line x1="555" y1="120" x2="600" y2="60" stroke="#68d391" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arr4)"/>
+        <line x1="555" y1="140" x2="600" y2="140" stroke="#63b3ed" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arr4)"/>
+        <line x1="555" y1="160" x2="600" y2="210" stroke="#b794f4" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arr4)"/>
+
+        <!-- Views column -->
+        <rect x="600" y="28" width="130" height="50" rx="4" fill="#1a3a1a" stroke="#68d391" stroke-width="1.3"/>
+        <text x="665" y="52" text-anchor="middle" fill="white" font-size="10" font-weight="bold">ChannelView</text>
+        <text x="665" y="67" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">/ SingleWindowView</text>
+
+        <rect x="600" y="115" width="130" height="50" rx="4" fill="#0f1f40" stroke="#63b3ed" stroke-width="1.3"/>
+        <text x="665" y="139" text-anchor="middle" fill="white" font-size="10" font-weight="bold">ScatterView</text>
+        <text x="665" y="154" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">PolarView / RatioView</text>
+
+        <rect x="600" y="192" width="130" height="50" rx="4" fill="#1a0a0a" stroke="#fc8181" stroke-width="1.3"/>
+        <text x="665" y="216" text-anchor="middle" fill="white" font-size="10" font-weight="bold">XorView</text>
+        <text x="665" y="231" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">/ DigitalXorView</text>
+
+        <!-- Views → Canvas -->
+        <line x1="730" y1="53" x2="760" y2="53" stroke="rgba(255,255,255,0.3)" stroke-width="1" marker-end="url(#arr4)"/>
+        <line x1="730" y1="140" x2="760" y2="140" stroke="rgba(255,255,255,0.3)" stroke-width="1" marker-end="url(#arr4)"/>
+        <line x1="730" y1="217" x2="760" y2="217" stroke="rgba(255,255,255,0.3)" stroke-width="1" marker-end="url(#arr4)"/>
+
+        <!-- Canvas -->
+        <rect x="760" y="28" width="52" height="210" rx="4" fill="#040810" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+        <text x="786" y="110" text-anchor="middle" fill="rgba(255,255,255,0.35)" font-size="9" writing-mode="tb" glyph-orientation-vertical="0" transform="rotate(-90,786,140)">CANVAS PIXELS</text>
+
+        <!-- AnimationService arrow -->
+        <rect x="285" y="10" width="110" height="38" rx="4" fill="#0d2030" stroke="#68d391" stroke-width="1.3" stroke-dasharray="5,3"/>
+        <text x="340" y="28" text-anchor="middle" fill="#68d391" font-size="9" font-weight="bold">Animation</text>
+        <text x="340" y="41" text-anchor="middle" fill="#68d391" font-size="9" font-weight="bold">Service (rAF)</text>
+        <line x1="395" y1="29" x2="600" y2="40" stroke="#68d391" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr4)"/>
+        <text x="500" y="22" fill="#68d391" font-size="8">tick t → _draw(t)</text>
+
+        <!-- AI panel -->
+        <rect x="425" y="218" width="130" height="50" rx="4" fill="#15052a" stroke="#b794f4" stroke-width="1.3"/>
+        <text x="490" y="242" text-anchor="middle" fill="white" font-size="10" font-weight="bold">AI Panel</text>
+        <text x="490" y="257" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="8">from server json.ai</text>
+        <line x1="490" y1="218" x2="490" y2="180" stroke="#b794f4" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr4)"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ── KEY DESIGN DECISIONS ── -->
+  <div class="section">
+    <div class="section-label">12 / Design Notes</div>
+    <h2>Notable Design Decisions</h2>
+    <div class="cards">
+      <div class="card blue">
+        <h4>No chart library</h4>
+        <p>All rendering is raw Canvas 2D API. This gives full control over rendering performance for large signals (tens of thousands of samples) and custom effects like the glow-double-stroke technique.</p>
+      </div>
+      <div class="card green">
+        <h4>Single file</h4>
+        <p>The entire app — HTML, CSS, and ~1700 lines of JS — lives in one <code>index.html</code>. This makes deployment trivial; just open it in a browser (with the Django server running for WFDB files).</p>
+      </div>
+      <div class="card amber">
+        <h4>Reactive state via SignalService</h4>
+        <p>Instead of passing props everywhere, all views subscribe to <code>SignalService</code>. This decouples views from each other — adding a new analysis view only requires subscribing to the relevant state keys.</p>
+      </div>
+      <div class="card purple">
+        <h4>RAF tick as clock</h4>
+        <p>The playback position is computed from the integer tick <code>t</code> times the speed scalar, not from <code>Date.now()</code>. This keeps animation perfectly frame-rate-synced and makes pause/resume trivial to implement.</p>
+      </div>
+      <div class="card red">
+        <h4>XOR = periodicity by definition</h4>
+        <p>The XOR analysis doesn't use a signal processing library. It directly measures cross-chunk variance at each phase position — a conceptually simple but effective heuristic for detecting heartbeat irregularity.</p>
+      </div>
+      <div class="card">
+        <h4>Mode separation</h4>
+        <p>Separate vs Single Window modes share the same underlying data and controls, but use completely different rendering classes. This avoids complex branching inside draw calls.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span>Medical Signal Viewer · Program Flow Documentation</span>
+  <span>index.html · Single-File Web App · Django Backend Required for WFDB</span>
+</footer>
+
+</body>
+</html>

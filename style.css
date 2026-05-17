@@ -1,0 +1,41 @@
+<<<<<<< HEAD
+body{
+    font-family: Arial, sans-serif;
+    text-align:center;
+    background:#f5f5f5;
+}
+
+.controls{
+    margin:15px;
+}
+
+canvas{
+    background:white;
+    border:1px solid #ccc;
+    cursor: grab;
+}
+
+canvas.panning{
+    cursor: grabbing;
+}
+=======
+body{
+    font-family: Arial, sans-serif;
+    text-align:center;
+    background:#f5f5f5;
+}
+
+.controls{
+    margin:15px;
+}
+
+canvas{
+    background:white;
+    border:1px solid #ccc;
+    cursor: grab;
+}
+
+canvas.panning{
+    cursor: grabbing;
+}
+>>>>>>> original-source/main
